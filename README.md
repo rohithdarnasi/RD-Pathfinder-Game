@@ -2,7 +2,7 @@
 
 An interactive web app where you draw walls on a grid and watch AI search algorithms find the shortest path in real time. Built to showcase Python algorithmic thinking with a slick, deployable web frontend.
 
-**Live demo:** [your-app.vercel.app](https://rd-pathfinder-game.vercel.app/)
+**Live demo:** [vercel.app](https://rd-pathfinder-game.vercel.app/)
 
 ---
 

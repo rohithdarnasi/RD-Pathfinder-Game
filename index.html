@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pathfinder AI — Visual Algorithm Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d0d14;
+    --surface:  #13131f;
+    --card:     #1a1a2e;
+    --border:   #252540;
+    --accent:   #7c6af7;
+    --accent2:  #06d6a0;
+    --red:      #f05365;
+    --yellow:   #ffd166;
+    --text:     #e2e4f0;
+    --muted:    #7a7d99;
+    --font:     'Inter', system-ui, sans-serif;
+    --mono:     'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: var(--surface);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .logo p {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .header-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--card);
+  }
+
+  .tag.active-tag {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124, 106, 247, 0.08);
+  }
+
+  /* ── Main layout ── */
+  main {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  button {
+    font-family: var(--font);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: all 0.12s;
+  }
+
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 11px;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    text-align: left;
+  }
+
+  .tool-btn:hover { background: var(--card); color: var(--text); }
+
+  .tool-btn.active {
+    background: rgba(124, 106, 247, 0.12);
+    color: var(--accent);
+    border-color: rgba(124, 106, 247, 0.3);
+  }
+
+  .tool-btn .icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  /* Algo selector */
+  select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 7px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a7d99' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  select:focus { border-color: var(--accent); outline: none; }
+
+  .algo-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--card);
+    border-radius: 6px;
+    border-left: 2px solid var(--accent);
+    font-family: var(--mono);
+  }
+
+  /* Run button */
+  .run-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .run-btn:hover { filter: brightness(1.12); }
+  .run-btn:active { transform: scale(0.98); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .clear-btn {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* Speed slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .slider-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+  }
+
+  .stat-card .val {
+    font-size: 20px;
+    font-weight: 600;
+    font-family: var(--mono);
+    color: var(--text);
+  }
+
+  .stat-card .lbl {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .stat-card.accent-stat .val { color: var(--accent2); }
+  .stat-card.yellow-stat .val { color: var(--yellow); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── Canvas area ── */
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  #status-bar {
+    width: 100%;
+    max-width: 600px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-family: var(--mono);
+    color: var(--text);
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #status-bar .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  #status-bar.running .dot { background: var(--accent2); animation: blink 0.8s infinite; }
+  #status-bar.found .dot   { background: var(--yellow); }
+  #status-bar.nope .dot    { background: var(--red); }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  #canvas-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 680px) {
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; }
+    main { flex-direction: column; }
+    .section-label { display: none; }
+    .btn-group { flex-direction: row; }
+    .stats-grid { display: none; }
+    .legend { flex-direction: row; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧭</div>
+    <div>
+      <h1>Pathfinder AI</h1>
+      <p>Visual Algorithm Simulator</p>
+    </div>
+  </div>
+  <div class="header-tags">
+    <span class="tag">Python</span>
+    <span class="tag active-tag" id="algo-tag">A* Algorithm</span>
+    <span class="tag">AI / Search</span>
+    <span class="tag">Interactive</span>
+  </div>
+</header>
+
+<main>
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-label">Tools</div>
+      <div class="btn-group">
+        <button class="tool-btn active" id="btnWall" onclick="setMode('wall')">
+          <span class="icon" style="background:rgba(124,106,247,0.15)">🧱</span> Draw wall
+        </button>
+        <button class="tool-btn" id="btnErase" onclick="setMode('erase')">
+          <span class="icon" style="background:rgba(240,83,101,0.12)">🧹</span> Erase
+        </button>
+        <button class="tool-btn" id="btnStart" onclick="setMode('start')">
+          <span class="icon" style="background:rgba(6,214,160,0.12)">🟢</span> Move start
+        </button>
+        <button class="tool-btn" id="btnEnd" onclick="setMode('end')">
+          <span class="icon" style="background:rgba(255,209,102,0.12)">🔴</span> Move end
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Algorithm</div>
+      <select id="algoSel" onchange="updateAlgoDesc()">
+        <option value="astar">A* (A-Star)</option>
+        <option value="dijkstra">Dijkstra's</option>
+        <option value="bfs">BFS (Breadth-First)</option>
+        <option value="dfs">DFS (Depth-First)</option>
+        <option value="greedy">Greedy Best-First</option>
+      </select>
+      <div class="algo-desc" id="algoDesc">
+        Heuristic-guided — optimal and fast. Uses Manhattan distance to prioritise cells closer to the goal.
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Speed</div>
+      <div class="slider-row">
+        <span>Slow</span>
+        <span class="slider-val" id="speedVal">×1</span>
+        <span>Fast</span>
+      </div>
+      <input type="range" id="speedSlider" min="1" max="10" value="4" oninput="document.getElementById('speedVal').textContent='×'+this.value">
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <button class="run-btn" id="runBtn" onclick="startSearch()">▶  Run algorithm</button>
+      <button class="clear-btn" onclick="clearPath()">Clear path</button>
+      <button class="clear-btn" onclick="clearAll()">Clear everything</button>
+    </div>
+
+    <div>
+      <div class="section-label">Stats</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="val" id="statExplored">0</div>
+          <div class="lbl">Explored</div>
+        </div>
+        <div class="stat-card accent-stat">
+          <div class="val" id="statPath">—</div>
+          <div class="lbl">Path length</div>
+        </div>
+        <div class="stat-card yellow-stat">
+          <div class="val" id="statMs">—</div>
+          <div class="lbl">Compute ms</div>
+        </div>
+        <div class="stat-card">
+          <div class="val" id="statWalls">0</div>
+          <div class="lbl">Walls</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Legend</div>
+      <div class="legend">
+        <div class="leg-item"><div class="swatch" style="background:#06d6a0"></div>Start</div>
+        <div class="leg-item"><div class="swatch" style="background:#f05365"></div>End</div>
+        <div class="leg-item"><div class="swatch" style="background:#3a3a5c"></div>Wall</div>
+        <div class="leg-item"><div class="swatch" style="background:#312e6e"></div>Explored</div>
+        <div class="leg-item"><div class="swatch" style="background:#8b7cf8; opacity:0.6"></div>Open set</div>
+        <div class="leg-item"><div class="swatch" style="background:#ffd166"></div>Shortest path</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <div class="canvas-area">
+    <div id="status-bar">
+      <div class="dot"></div>
+      <span id="statusText">Draw walls, then press Run algorithm</span>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────
+const COLS = 40, ROWS = 26;
+const EMPTY=0, WALL=1, OPEN_SET=2, CLOSED_SET=3, PATH=4;
+
+let grid = Array.from({length:ROWS}, () => new Array(COLS).fill(EMPTY));
+let start = {r:3,  c:3};
+let end   = {r:ROWS-4, c:COLS-4};
+let mode  = 'wall';
+let painting = false;
+let running  = false;
+let timers   = [];
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let CW, CH;
+
+// ── Canvas sizing ─────────────────────────────────────────────────────────
+function resize() {
+  const wrap = document.getElementById('canvas-area') || document.querySelector('.canvas-area');
+  const avW  = Math.min(window.innerWidth - 280, 760);
+  const avH  = Math.min(window.innerHeight - 120, 580);
+  const scale = Math.min(avW / COLS, avH / ROWS);
+  CW = CH = Math.floor(scale);
+  canvas.width  = CW * COLS;
+  canvas.height = CH * ROWS;
+  document.getElementById('canvas-wrap').style.width  = canvas.width  + 'px';
+  document.getElementById('canvas-wrap').style.height = canvas.height + 'px';
+  draw();
+}
+
+// ── Colors ────────────────────────────────────────────────────────────────
+function cellColor(r, c) {
+  if (r===start.r && c===start.c) return '#06d6a0';
+  if (r===end.r   && c===end.c)   return '#f05365';
+  const v = grid[r][c];
+  if (v===WALL)       return '#2a2a45';
+  if (v===CLOSED_SET) return '#1e1e4a';
+  if (v===OPEN_SET)   return '#2d2860';
+  if (v===PATH)       return '#ffd166';
+  return null;
+}
+
+// ── Draw ──────────────────────────────────────────────────────────────────
+function draw() {
+  if (!CW) return;
+  ctx.fillStyle = '#0d0d14';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const col = cellColor(r, c);
+      if (col) {
+        ctx.fillStyle = col;
+        if (grid[r][c]===PATH) {
+          // Path: draw with glow
+          ctx.shadowColor = '#ffd166';
+          ctx.shadowBlur  = 4;
+          ctx.fillRect(c*CW+1, r*CH+1, CW-1, CH-1);
+          ctx.shadowBlur  = 0;
+        } else {
+          ctx.fillRect(c*CW+1, r*CH+1, CW-1, CH-1);
+        }
+      }
+    }
+  }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth   = 0.5;
+  for (let r=0; r<=ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r*CH); ctx.lineTo(canvas.width, r*CH); ctx.stroke();
+  }
+  for (let c=0; c<=COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c*CW, 0); ctx.lineTo(c*CW, canvas.height); ctx.stroke();
+  }
+
+  // Start/End labels
+  const fs = Math.round(CW * 0.55);
+  ctx.font         = `bold ${fs}px sans-serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = '#0d0d14';
+
+  // Start dot ring
+  ctx.strokeStyle = '#06d6a0';
+  ctx.lineWidth   = 2;
+  ctx.strokeRect(start.c*CW+2, start.r*CH+2, CW-4, CH-4);
+  ctx.fillStyle   = '#0d0d14';
+  ctx.fillText('S', start.c*CW+CW/2, start.r*CH+CH/2);
+
+  ctx.strokeStyle = '#f05365';
+  ctx.strokeRect(end.c*CW+2, end.r*CH+2, CW-4, CH-4);
+  ctx.fillStyle   = '#0d0d14';
+  ctx.fillText('E', end.c*CW+CW/2, end.r*CH+CH/2);
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────
+function cellAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x    = (e.clientX - rect.left) * (canvas.width  / rect.width);
+  const y    = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  const c    = Math.floor(x / CW);
+  const r    = Math.floor(y / CH);
+  return (r>=0 && r<ROWS && c>=0 && c<COLS) ? {r,c} : null;
+}
+
+function applyCell(cell) {
+  if (!cell) return;
+  const {r,c} = cell;
+  if (mode==='wall')  { if (!(r===start.r&&c===start.c) && !(r===end.r&&c===end.c)) { grid[r][c]=WALL; updateWallCount(); } }
+  if (mode==='erase') { grid[r][c]=EMPTY; updateWallCount(); }
+  if (mode==='start') { start={r,c}; }
+  if (mode==='end')   { end={r,c}; }
+  draw();
+}
+
+canvas.addEventListener('mousedown', e=>{ if(running) return; painting=true; applyCell(cellAt(e)); });
+canvas.addEventListener('mousemove', e=>{ if(painting && !running) applyCell(cellAt(e)); });
+canvas.addEventListener('mouseup',   ()=>{ painting=false; });
+canvas.addEventListener('mouseleave',()=>{ painting=false; });
+
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); if(running) return; painting=true; applyCell(cellAt(e.touches[0])); }, {passive:false});
+canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); if(painting&&!running) applyCell(cellAt(e.touches[0])); }, {passive:false});
+canvas.addEventListener('touchend',   ()=>{ painting=false; });
+
+// ── Mode / UI ─────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  ['btnWall','btnErase','btnStart','btnEnd'].forEach(id=>{
+    document.getElementById(id).classList.remove('active');
+  });
+  const map={wall:'btnWall',erase:'btnErase',start:'btnStart',end:'btnEnd'};
+  document.getElementById(map[m]).classList.add('active');
+}
+
+const algoDescs = {
+  astar:    'Heuristic-guided — optimal & fast. Uses Manhattan distance to steer toward the goal.',
+  dijkstra: 'Explores all directions equally. Always finds the shortest path. No heuristic.',
+  bfs:      'Explores layer by layer. Guarantees shortest path on unweighted grids.',
+  dfs:      'Dives deep first. Fast but does NOT guarantee the shortest path.',
+  greedy:   'Rushes toward the goal. Fast but may miss the optimal route.',
+};
+
+const algoNames = { astar:'A* Algorithm', dijkstra:"Dijkstra's", bfs:'BFS', dfs:'DFS', greedy:'Greedy BFS' };
+
+function updateAlgoDesc() {
+  const v = document.getElementById('algoSel').value;
+  document.getElementById('algoDesc').textContent  = algoDescs[v];
+  document.getElementById('algo-tag').textContent  = algoNames[v];
+}
+
+function setStatus(text, state='idle') {
+  document.getElementById('statusText').textContent = text;
+  const bar = document.getElementById('status-bar');
+  bar.className = '';
+  if (state!=='idle') bar.classList.add(state);
+}
+
+function updateWallCount() {
+  let w=0; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]===WALL) w++;
+  document.getElementById('statWalls').textContent = w;
+}
+
+function clearPath() {
+  timers.forEach(clearTimeout); timers=[];
+  running=false;
+  document.getElementById('runBtn').disabled=false;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]!==WALL) grid[r][c]=EMPTY;
+  document.getElementById('statExplored').textContent='0';
+  document.getElementById('statPath').textContent='—';
+  document.getElementById('statMs').textContent='—';
+  setStatus('Path cleared — draw walls and run again');
+  draw();
+}
+
+function clearAll() {
+  timers.forEach(clearTimeout); timers=[];
+  running=false;
+  document.getElementById('runBtn').disabled=false;
+  grid=Array.from({length:ROWS},()=>new Array(COLS).fill(EMPTY));
+  document.getElementById('statExplored').textContent='0';
+  document.getElementById('statPath').textContent='—';
+  document.getElementById('statMs').textContent='—';
+  document.getElementById('statWalls').textContent='0';
+  setStatus('Canvas cleared');
+  draw();
+}
+
+// ── Algorithms ────────────────────────────────────────────────────────────
+function neighbors4(r,c) {
+  return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]
+    .filter(([nr,nc])=>nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&grid[nr][nc]!==WALL);
+}
+
+function h(r,c) { return Math.abs(r-end.r)+Math.abs(c-end.c); }
+
+function rebuildPath(came,r,c) {
+  const path=[];
+  let key=`${r},${c}`;
+  while(came[key]) { const[pr,pc]=came[key]; path.unshift([pr,pc]); key=`${pr},${pc}`; }
+  return path;
+}
+
+function computeFrames(algo) {
+  const frames=[];
+  const key=(r,c)=>`${r},${c}`;
+  const came={};
+  const visited=new Set();
+
+  if (algo==='astar' || algo==='greedy') {
+    const g={}; const f={};
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){g[key(r,c)]=Infinity;f[key(r,c)]=Infinity;}
+    g[key(start.r,start.c)]=0;
+    f[key(start.r,start.c)]=h(start.r,start.c);
+    const open=[[start.r,start.c]];
+
+    while(open.length) {
+      const sortKey = algo==='greedy' ? ([r,c])=>h(r,c) : ([r,c])=>f[key(r,c)];
+      open.sort((a,b)=>sortKey(a)-sortKey(b));
+      const[r,c]=open.shift();
+      const k=key(r,c);
+      if(visited.has(k)) continue;
+      visited.add(k);
+      if(r!==start.r||c!==start.c) frames.push({type:'close',r,c});
+      if(r===end.r&&c===end.c) { frames.push({type:'path',path:rebuildPath(came,r,c)}); return frames; }
+      for(const[nr,nc] of neighbors4(r,c)) {
+        const nk=key(nr,nc);
+        if(visited.has(nk)) continue;
+        const ng=g[k]+1;
+        if(ng<g[nk]) {
+          came[nk]=[r,c]; g[nk]=ng;
+          f[nk]=ng+h(nr,nc);
+          open.push([nr,nc]);
+          if(nr!==end.r||nc!==end.c) frames.push({type:'open',r:nr,c:nc});
+        }
+      }
+    }
+
+  } else if (algo==='dijkstra') {
+    const dist={};
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) dist[key(r,c)]=Infinity;
+    dist[key(start.r,start.c)]=0;
+    const queue=[[0,start.r,start.c]];
+
+    while(queue.length) {
+      queue.sort((a,b)=>a[0]-b[0]);
+      const[d,r,c]=queue.shift();
+      const k=key(r,c);
+      if(visited.has(k)) continue;
+      visited.add(k);
+      if(r!==start.r||c!==start.c) frames.push({type:'close',r,c});
+      if(r===end.r&&c===end.c) { frames.push({type:'path',path:rebuildPath(came,r,c)}); return frames; }
+      for(const[nr,nc] of neighbors4(r,c)) {
+        const nk=key(nr,nc);
+        if(visited.has(nk)) continue;
+        const nd=d+1;
+        if(nd<dist[nk]) { came[nk]=[r,c]; dist[nk]=nd; queue.push([nd,nr,nc]); frames.push({type:'open',r:nr,c:nc}); }
+      }
+    }
+
+  } else if (algo==='bfs') {
+    visited.add(key(start.r,start.c));
+    const queue=[[start.r,start.c]];
+    while(queue.length) {
+      const[r,c]=queue.shift();
+      if(r!==start.r||c!==start.c) frames.push({type:'close',r,c});
+      if(r===end.r&&c===end.c) { frames.push({type:'path',path:rebuildPath(came,r,c)}); return frames; }
+      for(const[nr,nc] of neighbors4(r,c)) {
+        const nk=key(nr,nc);
+        if(!visited.has(nk)) { visited.add(nk); came[nk]=[r,c]; queue.push([nr,nc]); frames.push({type:'open',r:nr,c:nc}); }
+      }
+    }
+
+  } else if (algo==='dfs') {
+    const stack=[[start.r,start.c]];
+    while(stack.length) {
+      const[r,c]=stack.pop();
+      const k=key(r,c);
+      if(visited.has(k)) continue;
+      visited.add(k);
+      if(r!==start.r||c!==start.c) frames.push({type:'close',r,c});
+      if(r===end.r&&c===end.c) { frames.push({type:'path',path:rebuildPath(came,r,c)}); return frames; }
+      for(const[nr,nc] of neighbors4(r,c)) {
+        const nk=key(nr,nc);
+        if(!visited.has(nk)) { came[nk]=[r,c]; stack.push([nr,nc]); frames.push({type:'open',r:nr,c:nc}); }
+      }
+    }
+  }
+
+  frames.push({type:'nope'});
+  return frames;
+}
+
+// ── Animate frames ────────────────────────────────────────────────────────
+function startSearch() {
+  if (running) return;
+  clearPath();
+  running=true;
+  document.getElementById('runBtn').disabled=true;
+  setStatus('Computing…', 'running');
+
+  const algo=document.getElementById('algoSel').value;
+  const speed=parseInt(document.getElementById('speedSlider').value);
+  const delay=Math.round(80/speed);   // 8ms–80ms per frame
+
+  const t0=performance.now();
+  const frames=computeFrames(algo);
+  const ms=Math.round(performance.now()-t0);
+  document.getElementById('statMs').textContent=ms;
+
+  let explored=0;
+
+  function playFrame(i) {
+    if (i>=frames.length) { running=false; document.getElementById('runBtn').disabled=false; return; }
+    const f=frames[i];
+
+    if (f.type==='open') {
+      if ((f.r!==start.r||f.c!==start.c)&&(f.r!==end.r||f.c!==end.c)) grid[f.r][f.c]=OPEN_SET;
+    } else if (f.type==='close') {
+      if ((f.r!==start.r||f.c!==start.c)&&(f.r!==end.r||f.c!==end.c)) { grid[f.r][f.c]=CLOSED_SET; explored++; document.getElementById('statExplored').textContent=explored; }
+    } else if (f.type==='path') {
+      f.path.forEach(([pr,pc])=>{ if((pr!==start.r||pc!==start.c)&&(pr!==end.r||pc!==end.c)) grid[pr][pc]=PATH; });
+      document.getElementById('statPath').textContent=f.path.length;
+      setStatus(`${algoNames[algo]} found a path — ${f.path.length} steps, ${explored} cells explored`, 'found');
+      draw(); running=false; document.getElementById('runBtn').disabled=false; return;
+    } else if (f.type==='nope') {
+      setStatus('No path exists — try removing some walls', 'nope');
+      draw(); running=false; document.getElementById('runBtn').disabled=false; return;
+    }
+
+    draw();
+    const id=setTimeout(()=>playFrame(i+1), delay);
+    timers.push(id);
+  }
+
+  setStatus(`${algoNames[algo]} running…`, 'running');
+  playFrame(0);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('resize', resize);
+resize();
+
+// Preset a small maze hint
+const presetWalls=[
+  [5,10],[6,10],[7,10],[8,10],[9,10],[10,10],[11,10],[12,10],
+  [5,20],[6,20],[7,20],[8,20],[9,20],[10,20],[11,20],[12,20],
+  [12,10],[12,11],[12,12],[12,13],[12,14],[12,15],[12,16],[12,17],[12,18],[12,19],[12,20],
+];
+presetWalls.forEach(([r,c])=>{ if(r<ROWS&&c<COLS) grid[r][c]=WALL; });
+updateWallCount();
+draw();
+</script>
+</body>
+</html>
